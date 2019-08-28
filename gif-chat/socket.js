@@ -11,6 +11,9 @@ module.exports = (server, app, sessionMiddleware) => {
   const chat = io.of('/chat');
 
   io.use((socket, next) => {
+    cookieParser(process.env.COOKIE_SECRET)(socket.request, socket.request.res, next);
+  });
+  io.use((socket, next) => {
     sessionMiddleware(socket.request, socket.request.res, next);
   });
 
@@ -31,18 +34,18 @@ module.exports = (server, app, sessionMiddleware) => {
 
     socket.join(roomId);
 
-    socket.to(roomId).emit('join', {
-      user: 'system',
-      chat: `${req.session.color}님이 입장하셨습니다.`,
-      number: socket.adapter.rooms[roomId].length,
-    });
-    axios.post(`http://localhost:8005/room/${roomId/sys}`, {
+    // socket.to(roomId).emit('join', {
+    //   user: 'system',
+    //   chat: `${req.session.color}님이 입장하셨습니다.`,
+    //   number: socket.adapter.rooms[roomId].length,
+    // });
+    axios.post(`http://localhost:8005/room/${roomId}/sys`, {
       type: 'join',
     }, {
       headers: {
         Cookie: `connect.sid=${'s%3A' + cookie.sign(req.signedCookies['connect.sid'], process.env.COOKIE_SECRET)}`
       },
-    })
+    });
 
     socket.on('disconnect', () => {
       console.log('chat 네임스페이스 접속 해제');
@@ -58,12 +61,32 @@ module.exports = (server, app, sessionMiddleware) => {
             console.error(error);
           });
       } else {
-        socket.to(roomId).emit('exit', {
-          user: 'system',
-          chat: `${req.session.color}님이 퇴장하셨습니다.`,
-          number: socket.adapter.rooms[roomId].length,
+        // socket.to(roomId).emit('exit', {
+        //   user: 'system',
+        //   chat: `${req.session.color}님이 퇴장하셨습니다.`,
+        //   number: socket.adapter.rooms[roomId].length,
+        // });
+        axios.post(`http://localhost:8005/room/${roomId}/sys`, {
+          type: 'exit',
+        }, {
+          headers: {
+            Cookie: `connect.sid=${'s%3A' + cookie.sign(req.signedCookies['connect.sid'], process.env.COOKIE_SECRET)}`
+          },
         });
       }
     });
+
+    socket.on('dm', (data) => {
+      socket.to(data.target).emit('dm', data);
+    });
+
+    socket.on('ban', (data) => {
+      socket.to(data.id).emit('ban');
+    });
+
+    socket.on('delegate', (data) => {
+      socket.to(data.id).emit('delegate');
+    });
+
   });
 };
