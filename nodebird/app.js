@@ -2,10 +2,29 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const path = require('path');
+const redis = require('redis');
 const session = require('express-session');
 const flash = require('connect-flash');
 const passport = require('passport');
+const helmet = require('helmet');
+const hpp = require('hpp');
+let RedisStore = require('connect-redis')(session);
 require('dotenv').config();
+
+let client = redis.createClient({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  auth_pass: process.env.REDIS_PASSWORD,
+  no_ready_check: true,
+});
+
+client.on('connect', () => {
+  console.log("connected");
+});
+
+client.on('error', err => {
+  console.log(err.message)
+});
 
 const indexRouter = require('./routes/page');
 const authRouter = require('./routes/auth');
@@ -13,6 +32,7 @@ const postRouter = require('./routes/post');
 const userRouter = require('./routes/user');
 const { sequelize } = require('./models');
 const passportConfig = require('./passport');
+const logger = require('./logger');
 
 const app = express();
 sequelize.sync();
@@ -22,21 +42,33 @@ app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 app.set('port', process.env.PORT || 8001);
 
-app.use(morgan('dev'));
+if (process.env.NODE_ENV === 'production') {
+  app.use(morgan('combined'));
+  app.use(helmet());
+  app.use(hpp());
+} else {
+  app.use(morgan('dev'));
+}
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/img', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
-app.use(session({
+const sessionOption = {
   resave: false,
   saveUninitialized: false,
   secret: process.env.COOKIE_SECRET,
   cookie: {
     httpOnly: true,
     secure: false
-  }
-}));
+  },
+  store: new RedisStore({ client }),
+};
+if (process.env.NODE_ENV === 'production') {
+  sessionOption.proxy = true;
+  // sessionOption.cookie.secure = true;
+}
+app.use(session(sessionOption));
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
@@ -49,16 +81,18 @@ app.use('/user', userRouter);
 app.use((req, res, next) => {
   const err = new Error('Not Found');
   err.status = 404;
+  logger.info('hello');
+  logger.error(err.message);
   next(err);
-})
+});
 
 app.use((err, req, res) => {
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
   res.status(err.status || 500);
   res.render('error');
-})
+});
 
 app.listen(app.get('port'), () => {
   console.log(`${app.get('port')}번 포트에서 서버 실행중입니다.`);
-})
+});

@@ -19,7 +19,7 @@ router.post('/', (req, res, next) => {
     name: req.body.name,
     age: req.body.age,
     married: req.body.married
-  })
+  });
   user.save()
     .then((result) => {
       res.status(201).json(result);
