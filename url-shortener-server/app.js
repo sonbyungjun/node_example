@@ -1,21 +1,13 @@
 const express = require('express');
 const app = express();
-const { port, mongodbURL } = require('./config');
-var connect = require('./schemas');
+const { port } = require('./config');
+const connect = require('./schemas');
+const cors = require('cors');
 
 connect();
 
 app.use((req, res, next) => {
-  var allowedOrigins = ['']; // 허용 URL
-  var origin = req.headers.origin;
-  if (allowedOrigins.indexOf(origin) > -1) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', true);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', true);
-  next();
+  cors({ origin: 'http://localhost:8080' })(req, res, next);
 });
 
 app.use('/', require('./routes/api'));
