@@ -13,7 +13,7 @@ app.use((req, res, next) => {
 app.use('/', require('./routes/api'));
 
 app.use((req, res, next) => {
-  const err = new Error('Not Found');
+  const err = new Error('페이지를 찾을 수 없습니다.');
   err.status = 404;
   next(err);
 });
@@ -24,8 +24,8 @@ app.use((err, req, res, next) => {
   }
   res.json({
     success: false,
-    message: err.message,
-    error: err
+    code: err.status,
+    message: err.message
   });
 });
 
