@@ -20,7 +20,9 @@ const upload = multer({
 });
 
 router.post('/img', isLoggedIn, upload.single('img'), (req, res, next) => {
-    res.json({ url: `/img/${req.file.filename}`});
+    res.json({
+        url : `/img/${req.file.filename}`
+    });
 });
 
 router.post('/', isLoggedIn, upload.none(), async (req, res, next) => {
