@@ -10,11 +10,6 @@ router.get('/:id', async (req, res, next) => {
       req.session.name = new Date().valueOf();
     }
     const goods = await Goods.findOne({_id: req.params.id});
-    console.log(goods)
-    if (!goods) {
-      console.log("????")
-      throw new CustomError('없는 상품입니다.', 400)
-    }
     const amount = req.query.amount && (parseInt(req.query.amount) > 0) ? parseInt(req.query.amount) : 1;
     const sum = goods.price * amount;
     const oldCart = await Cart.findOne({ goods : req.params.id, user: req.session.name});
@@ -35,7 +30,7 @@ router.get('/:id', async (req, res, next) => {
     });
   } catch (error) {
     console.error(error);
-    next(error);
+    next(new CustomError('없는 상품입니다.', 400));
   }
 });
 
